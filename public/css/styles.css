@@ -128,3 +128,42 @@ body {
     transform: translateY(-3px);
     background: #e9f4ff;
 }
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.table th {
+    background: #007acc;
+    color: white;
+}
+
+.btn, .btn-small {
+    display: inline-block;
+    padding: 8px 12px;
+    background: #007acc;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    margin: 5px;
+    transition: background 0.2s;
+}
+
+.btn:hover, .btn-small:hover {
+    background: #005f99;
+}
+
+.btn-danger {
+    background: #cc0000;
+}
+
+.btn-secondary {
+    background: #777;
+}
