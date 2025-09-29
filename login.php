@@ -1,54 +1,53 @@
 <?php
-// login.php
 session_start();
-require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/config/users.php';
-
-// logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: login.php');
-    exit;
-}
-
-// redirect if logged
-if (isset($_SESSION['username'])) {
-    header('Location: index.php'); exit;
-}
+require 'config/db.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-    if ($username === '' || $password === '') $error = 'Ingrese usuario y contraseña.';
-    else {
-        $user = getUserByUsername($username);
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            header('Location: index.php');
+    $username = trim($_POST['username']);
+    $password = $_POST['password'];
+
+    $stmt = $conn->prepare("SELECT id, password, rol FROM usuarios WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($id, $hashed_password, $rol);
+        $stmt->fetch();
+
+        if (password_verify($password, $hashed_password)) {
+            $_SESSION['user_id'] = $id;
+            $_SESSION['username'] = $username;
+            $_SESSION['rol'] = $rol;
+            header("Location: index.php");
             exit;
-        } else $error = 'Usuario o contraseña incorrectos.';
+        } else {
+            $error = "❌ Contraseña incorrecta.";
+        }
+    } else {
+        $error = "❌ Usuario no encontrado.";
     }
 }
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<title>Login - Escalafones IRG</title>
-<link rel="stylesheet" href="/escalafones-irg/public/css/styles.css">
+    <meta charset="UTF-8">
+    <title>Login - Escalafones IRG</title>
+    <link rel="stylesheet" href="public/css/styles.css">
 </head>
 <body>
-<div class="login-container">
-  <h2>Ingresar</h2>
-  <?php if($error): ?><div class="error"><?=htmlspecialchars($error)?></div><?php endif; ?>
-  <form method="post">
-    <label>Usuario<br><input name="username" required></label><br>
-    <label>Contraseña<br><input name="password" type="password" required></label><br><br>
-    <button type="submit">Entrar</button>
-  </form>
-</div>
+    <h2>Acceso al Sistema Escalafones IRG</h2>
+    <?php if ($error): ?>
+        <p style="color:red;"><?= $error ?></p>
+    <?php endif; ?>
+    <form method="POST">
+        <label>Usuario:</label>
+        <input type="text" name="username" required><br>
+        <label>Contraseña:</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">Ingresar</button>
+    </form>
 </body>
 </html>
