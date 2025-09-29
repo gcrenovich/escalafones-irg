@@ -1,7 +1,7 @@
 <?php
-include '../includes/db.php';
-include '../includes/head.php';
-include '../includes/menu.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha = $_POST['fecha'];
