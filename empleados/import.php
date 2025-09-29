@@ -1,55 +1,25 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/header.php';
-if (!isset($_SESSION['username'])) { header('Location: /login.php'); exit; }
+include '../includes/db.php';
 
-$msg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
-    $tmp = $_FILES['archivo']['tmp_name'];
-    $name = $_FILES['archivo']['name'];
-    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-    $rows = [];
+if ($_POST && isset($_FILES['file'])) {
+    $file = $_FILES['file']['tmp_name'];
+    $handle = fopen($file, "r");
+    while(($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        $legajo = $data[0];
+        $nombre = $data[1];
+        $categoria = $data[2];
+        $fecha = $data[3];
 
-    if (in_array($ext,['csv','txt'])) {
-        if (($h = fopen($tmp,'r')) !== false) {
-            $header = fgetcsv($h,0,',');
-            while (($r = fgetcsv($h,0,',')) !== false) $rows[] = $r;
-            fclose($h);
-        }
-    } else {
-        $msg = "Sólo se permiten CSV en esta importación (o instalar PhpSpreadsheet para XLS/XLSX).";
+        $conn->query("INSERT INTO empleados (legajo,nombre,categoria,fecha_ingreso) 
+                      VALUES ('$legajo','$nombre','$categoria','$fecha')");
     }
-
-    $processed = 0;
-    foreach($rows as $r) {
-        $leg = trim($r[0] ?? '');
-        $nom = trim($r[1] ?? '');
-        $fing = trim($r[2] ?? '');
-        $cat = strtolower(trim($r[3] ?? 'eventual'));
-        if ($leg=='' || $nom=='') continue;
-        // upsert
-        $stm = $mysqli->prepare("SELECT legajo FROM empleados WHERE legajo = ?");
-        $stm->bind_param('s',$leg); $stm->execute();
-        if ($stm->get_result()->fetch_assoc()) {
-            $up = $mysqli->prepare("UPDATE empleados SET nombre=?, categoria=?, fecha_ingreso=? WHERE legajo=?");
-            $up->bind_param('ssss',$nom,$cat,$fing,$leg);
-            $up->execute();
-        } else {
-            $ins = $mysqli->prepare("INSERT INTO empleados (legajo,nombre,categoria,fecha_ingreso) VALUES (?,?,?,?)");
-            $ins->bind_param('ssss',$leg,$nom,$cat,$fing);
-            $ins->execute();
-        }
-        $processed++;
-    }
-    $msg = "Importación finalizada. Filas procesadas: $processed";
+    fclose($handle);
+    header("Location: index.php");
 }
 ?>
 
-<h2>Importar Empleados (CSV)</h2>
-<?php if($msg) echo "<p>$msg</p>"; ?>
+<h2>Importar Empleados</h2>
 <form method="post" enctype="multipart/form-data">
-  <label>Archivo CSV (legajo,nombre,fecha_ingreso,categoria)</label><br>
-  <input type="file" name="archivo" accept=".csv" required><br><br>
-  <button>Subir</button>
+  Archivo CSV: <input type="file" name="file" accept=".csv" required>
+  <input type="submit" value="Importar">
 </form>
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>

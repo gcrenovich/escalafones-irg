@@ -1,57 +1,33 @@
 <?php
-// registros/index.php
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/header.php';
-if (!isset($_SESSION['username'])) { header('Location: /escalafones-irg/login.php'); exit; }
+include '../includes/db.php';
+include '../includes/head.php';
+include '../includes/menu.php';
 
-$page = max(1, intval($_GET['page'] ?? 1));
-$perPage = 50;
-$offset = ($page - 1) * $perPage;
-
-$q = "SELECT r.id, r.legajo, e.nombre, r.fecha, r.horas, r.dias_calculados, r.concepto
-      FROM registros r
-      LEFT JOIN empleados e ON e.legajo = r.legajo
-      ORDER BY r.fecha DESC, r.id DESC
-      LIMIT ? OFFSET ?";
-$stmt = $mysqli->prepare($q);
-$stmt->bind_param("ii", $perPage, $offset);
-$stmt->execute();
-$res = $stmt->get_result();
-
-// contar total para paginación
-$total = $mysqli->query("SELECT COUNT(*) as c FROM registros")->fetch_assoc()['c'];
-$totalPages = ceil($total / $perPage);
+$result = $conn->query("
+    SELECT r.id, r.fecha, r.concepto, e.legajo, e.nombre, e.categoria
+    FROM registros r
+    JOIN empleados e ON r.legajo = e.legajo
+    ORDER BY r.fecha DESC
+");
 ?>
-
-<h2>Registros cargados</h2>
-<p><a href="import.php">Importar nuevos</a></p>
-
-<table class="table">
-<tr>
-  <th>ID</th><th>Legajo</th><th>Nombre</th><th>Fecha</th>
-  <th>Horas</th><th>Días calculados</th><th>Concepto</th>
-</tr>
-<?php while($r = $res->fetch_assoc()): ?>
-<tr>
-  <td><?=$r['id']?></td>
-  <td><?=htmlspecialchars($r['legajo'])?></td>
-  <td><?=htmlspecialchars($r['nombre'])?></td>
-  <td><?=htmlspecialchars($r['fecha'])?></td>
-  <td><?=$r['horas']?></td>
-  <td><?=round($r['dias_calculados'],2)?></td>
-  <td><?=htmlspecialchars($r['concepto'])?></td>
-</tr>
-<?php endwhile; ?>
+<h2>Registros</h2>
+<a href="add.php">➕ Agregar Registro</a> |
+<a href="import.php">📂 Importar Registros</a>
+<table border="1" cellpadding="5">
+    <tr>
+        <th>ID</th><th>Fecha</th><th>Concepto</th>
+        <th>Legajo</th><th>Nombre</th><th>Categoría</th>
+        <th>Acciones</th>
+    </tr>
+    <?php while($row = $result->fetch_assoc()): ?>
+    <tr>
+        <td><?= $row['id'] ?></td>
+        <td><?= $row['fecha'] ?></td>
+        <td><?= $row['concepto'] ?></td>
+        <td><?= $row['legajo'] ?></td>
+        <td><?= $row['nombre'] ?></td>
+        <td><?= ucfirst($row['categoria']) ?></td>
+        <td><a href="delete.php?id=<?= $row['id'] ?>">🗑️ Eliminar</a></td>
+    </tr>
+    <?php endwhile; ?>
 </table>
-
-<div>
-  <?php if($page > 1): ?>
-    <a href="?page=<?=$page-1?>">Anterior</a>
-  <?php endif; ?>
-  Página <?=$page?> de <?=$totalPages?>
-  <?php if($page < $totalPages): ?>
-    <a href="?page=<?=$page+1?>">Siguiente</a>
-  <?php endif; ?>
-</div>
-
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
