@@ -20,8 +20,20 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
+    
     if ($username === '' || $password === '') $error = 'Ingrese usuario y contraseña.';
     else {
+
+        // --- Usuario de prueba para testeo ---
+        if ($username === 'admi' && $password === 'admin') {
+            $_SESSION['user_id'] = 0; // id ficticio
+            $_SESSION['username'] = 'admi';
+            $_SESSION['role'] = 'admin';
+            header('Location: index.php');
+            exit;
+        }
+
+        // --- Validación normal contra la base de datos ---
         $user = getUserByUsername($username);
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
@@ -52,3 +64,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </body>
 </html>
+
