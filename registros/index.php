@@ -1,63 +1,57 @@
 <?php
-session_start();
+// registros/index.php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/header.php';
+if (!isset($_SESSION['username'])) { header('Location: /escalafones-irg/login.php'); exit; }
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
-    exit;
-}
+$page = max(1, intval($_GET['page'] ?? 1));
+$perPage = 50;
+$offset = ($page - 1) * $perPage;
 
-$sql = "SELECT r.id, e.legajo, e.nombre, r.fecha, r.concepto, r.cantidad, r.dias_equivalentes
-        FROM registros r
-        JOIN empleados e ON r.empleado_id = e.id
-        ORDER BY r.fecha DESC";
-$result = $conn->query($sql);
+$q = "SELECT r.id, r.legajo, e.nombre, r.fecha, r.horas, r.dias_calculados, r.concepto
+      FROM registros r
+      LEFT JOIN empleados e ON e.legajo = r.legajo
+      ORDER BY r.fecha DESC, r.id DESC
+      LIMIT ? OFFSET ?";
+$stmt = $mysqli->prepare($q);
+$stmt->bind_param("ii", $perPage, $offset);
+$stmt->execute();
+$res = $stmt->get_result();
+
+// contar total para paginación
+$total = $mysqli->query("SELECT COUNT(*) as c FROM registros")->fetch_assoc()['c'];
+$totalPages = ceil($total / $perPage);
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Registros - Escalafones IRG</title>
-    <link rel="stylesheet" href="../public/css/styles.css">
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
+<h2>Registros cargados</h2>
+<p><a href="import.php">Importar nuevos</a></p>
 
-<div class="container">
-    <h1>📑 Registros</h1>
-    <a href="import.php" class="btn">📥 Importar CSV</a>
+<table class="table">
+<tr>
+  <th>ID</th><th>Legajo</th><th>Nombre</th><th>Fecha</th>
+  <th>Horas</th><th>Días calculados</th><th>Concepto</th>
+</tr>
+<?php while($r = $res->fetch_assoc()): ?>
+<tr>
+  <td><?=$r['id']?></td>
+  <td><?=htmlspecialchars($r['legajo'])?></td>
+  <td><?=htmlspecialchars($r['nombre'])?></td>
+  <td><?=htmlspecialchars($r['fecha'])?></td>
+  <td><?=$r['horas']?></td>
+  <td><?=round($r['dias_calculados'],2)?></td>
+  <td><?=htmlspecialchars($r['concepto'])?></td>
+</tr>
+<?php endwhile; ?>
+</table>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Legajo</th>
-                <th>Nombre</th>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th>Cantidad</th>
-                <th>Días equivalentes</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php if ($result->num_rows > 0): ?>
-            <?php while ($row = $result->fetch_assoc()): ?>
-                <tr>
-                    <td><?= htmlspecialchars($row['legajo']) ?></td>
-                    <td><?= htmlspecialchars($row['nombre']) ?></td>
-                    <td><?= htmlspecialchars($row['fecha']) ?></td>
-                    <td><?= htmlspecialchars($row['concepto']) ?></td>
-                    <td><?= htmlspecialchars($row['cantidad']) ?></td>
-                    <td><?= htmlspecialchars($row['dias_equivalentes']) ?></td>
-                </tr>
-            <?php endwhile; ?>
-        <?php else: ?>
-            <tr><td colspan="6">No hay registros cargados.</td></tr>
-        <?php endif; ?>
-        </tbody>
-    </table>
+<div>
+  <?php if($page > 1): ?>
+    <a href="?page=<?=$page-1?>">Anterior</a>
+  <?php endif; ?>
+  Página <?=$page?> de <?=$totalPages?>
+  <?php if($page < $totalPages): ?>
+    <a href="?page=<?=$page+1?>">Siguiente</a>
+  <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -1,90 +1,92 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/header.php';
+if (!isset($_SESSION['username'])) { header('Location: /login.php'); exit; }
 
-// Verificar login
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
-    exit;
-}
-
-$msg = "";
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
-    $file = $_FILES['file']['tmp_name'];
-
-    if (($handle = fopen($file, "r")) !== FALSE) {
-        $row = 0;
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            $row++;
-            if ($row == 1) continue; // Saltar encabezado
-
-            // Asumimos que el CSV trae: legajo, fecha, concepto, cantidad
-            $legajo = $data[0];
-            $fecha = $data[1];
-            $concepto = strtolower(trim($data[2])); 
-            $cantidad = floatval($data[3]);
-
-            // Buscar ID del empleado
-            $stmt = $conn->prepare("SELECT id FROM empleados WHERE legajo=?");
-            $stmt->bind_param("s", $legajo);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            if ($emp = $result->fetch_assoc()) {
-                $empleado_id = $emp['id'];
-
-                // Convertir cantidad a días equivalentes
-                $dias = 0;
-                if ($concepto === "dia") {
-                    $dias = $cantidad;
-                } elseif ($concepto === "hora") {
-                    $dias = $cantidad / 8; // 8 horas = 1 día
-                } elseif ($concepto === "surco") {
-                    $dias = $cantidad / 12; // 12 surcos = 1 día
-                }
-
-                // Guardar registro
-                $stmt2 = $conn->prepare("INSERT INTO registros (empleado_id, fecha, concepto, cantidad, dias_equivalentes) VALUES (?, ?, ?, ?, ?)");
-                $stmt2->bind_param("isssd", $empleado_id, $fecha, $concepto, $cantidad, $dias);
-                $stmt2->execute();
-
-                // Actualizar acumuladores en empleados
-                $stmt3 = $conn->prepare("UPDATE empleados SET dias_actuales = dias_actuales + ?, dias_totales = dias_totales + ? WHERE id=?");
-                $stmt3->bind_param("ddi", $dias, $dias, $empleado_id);
-                $stmt3->execute();
-            }
-        }
-        fclose($handle);
-        $msg = "Archivo procesado correctamente ✅";
-    } else {
-        $msg = "Error al abrir el archivo ❌";
+$msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
+    $tmp = $_FILES['archivo']['tmp_name'];
+    $name = $_FILES['archivo']['name'];
+    $rows = [];
+    if (($h = fopen($tmp,'r')) !== false) {
+        $header = fgetcsv($h,0,',');
+        while (($r = fgetcsv($h,0,',')) !== false) $rows[] = $r;
+        fclose($h);
     }
+    $processed = 0;
+    foreach($rows as $r) {
+        $leg = trim($r[0] ?? '');
+        $fecha = trim($r[1] ?? date('Y-m-d'));
+        $unidad = strtolower(trim($r[2] ?? 'dias'));
+        $cantidad = floatval($r[3] ?? 0);
+        $concepto = trim($r[4] ?? null);
+        if ($leg=='' || $cantidad<=0) continue;
+
+        // existe empleado?
+        $stm = $mysqli->prepare("SELECT legajo, dias_actuales FROM empleados WHERE legajo=?");
+        $stm->bind_param('s',$leg); $stm->execute();
+        $emp = $stm->get_result()->fetch_assoc();
+        if (!$emp) {
+            // ignorar o loguear
+            file_put_contents(__DIR__ . '/../logs/import_errors.log', date('c')." - Empleado $leg no encontrado\n", FILE_APPEND);
+            continue;
+        }
+
+        // calcular dias_equivalentes
+        if ($unidad === 'horas') $dias = $cantidad / 8.0;
+        else $dias = $cantidad;
+
+        // insertar registro
+        $ins = $mysqli->prepare("INSERT INTO registros (legajo, fecha, horas, dias_calculados, concepto) VALUES (?,?,?,?,?)");
+        $horas_db = ($unidad === 'horas') ? intval($cantidad) : 0;
+        $ins->bind_param('sidss', $leg, $fecha, $horas_db, $dias, $concepto);
+        $ins->execute();
+
+        // actualizar empleados: dias_actuales, dias_totales
+        // sumar y comprobar ciclo 270
+        $mysqli->begin_transaction();
+        try {
+            // obtener valores nuevos
+            $update1 = $mysqli->prepare("UPDATE empleados SET dias_actuales = dias_actuales + ?, dias_totales = dias_totales + ? WHERE legajo = ?");
+            $update1->bind_param('dds',$dias,$dias,$leg);
+            $update1->execute();
+
+            // leer dias_actuales
+            $read = $mysqli->prepare("SELECT dias_actuales, escalafon FROM empleados WHERE legajo = ?");
+            $read->bind_param('s',$leg); $read->execute();
+            $cur = $read->get_result()->fetch_assoc();
+            $cur_days = floatval($cur['dias_actuales']);
+            $cur_escal = intval($cur['escalafon']);
+
+            while ($cur_days >= 270.0) {
+                $cur_escal += 1;
+                $cur_days -= 270.0;
+            }
+            // actualizar escalafon y dias_actuales (resultado)
+            $update2 = $mysqli->prepare("UPDATE empleados SET escalafon = ?, dias_actuales = ? WHERE legajo = ?");
+            $update2->bind_param('ids',$cur_escal,$cur_days,$leg);
+            $update2->execute();
+
+            $mysqli->commit();
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            file_put_contents(__DIR__ . '/../logs/import_errors.log', date('c')." - Error al actualizar empleado $leg: ".$e->getMessage()."\n", FILE_APPEND);
+            continue;
+        }
+
+        $processed++;
+    }
+    $msg = "Importación finalizada. Registros procesados: $processed";
 }
+
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Importar Registros</title>
-    <link rel="stylesheet" href="../public/css/styles.css">
-</head>
-<body>
-<?php include __DIR__ . '/../includes/header.php'; ?>
+<h2>Importar Registros (CSV)</h2>
+<?php if($msg) echo "<p>$msg</p>"; ?>
+<form method="post" enctype="multipart/form-data">
+  <label>Archivo CSV (legajo,fecha,unidad(dias|horas),cantidad,concepto)</label><br>
+  <input type="file" name="archivo" accept=".csv" required><br><br>
+  <button>Subir y procesar</button>
+</form>
 
-<div class="container">
-    <h1>📥 Importar registros</h1>
-    <?php if ($msg): ?>
-        <p><?= $msg ?></p>
-    <?php endif; ?>
-
-    <form method="post" enctype="multipart/form-data">
-        <label>Selecciona archivo CSV:</label>
-        <input type="file" name="file" required>
-        <button type="submit" class="btn">📤 Importar</button>
-    </form>
-</div>
-
-<?php include __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>
