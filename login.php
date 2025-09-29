@@ -1,66 +1,54 @@
 <?php
+// login.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/users.php';
 
-// Si ya está logueado, lo mando al index
-if (isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+// logout
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: login.php');
     exit;
 }
 
-$error = '';
+// redirect if logged
+if (isset($_SESSION['username'])) {
+    header('Location: index.php'); exit;
+}
 
+$error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
-
-    if ($username && $password) {
-        // Consulta usuario
-        $stmt = $pdo->prepare("SELECT id, username, password, role FROM users WHERE username = :username LIMIT 1");
-        $stmt->execute(['username' => $username]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    if ($username === '' || $password === '') $error = 'Ingrese usuario y contraseña.';
+    else {
+        $user = getUserByUsername($username);
         if ($user && password_verify($password, $user['password'])) {
-            // Guardamos sesión
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
-
-            header("Location: index.php");
+            header('Location: index.php');
             exit;
-        } else {
-            $error = "Usuario o contraseña incorrectos.";
-        }
-    } else {
-        $error = "Debe ingresar usuario y contraseña.";
+        } else $error = 'Usuario o contraseña incorrectos.';
     }
 }
 ?>
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Login - Escalafones IRG</title>
-    <link rel="stylesheet" href="public/css/styles.css">
+<meta charset="utf-8">
+<title>Login - Escalafones IRG</title>
+<link rel="stylesheet" href="/escalafones-irg/public/css/styles.css">
 </head>
 <body>
-    <div class="login-container">
-        <h2>Acceso al Sistema</h2>
-
-        <?php if ($error): ?>
-            <p class="error"><?= htmlspecialchars($error) ?></p>
-        <?php endif; ?>
-
-        <form method="post" action="">
-            <label for="username">Usuario:</label>
-            <input type="text" name="username" id="username" required>
-
-            <label for="password">Contraseña:</label>
-            <input type="password" name="password" id="password" required>
-
-            <button type="submit">Ingresar</button>
-        </form>
-    </div>
+<div class="login-container">
+  <h2>Ingresar</h2>
+  <?php if($error): ?><div class="error"><?=htmlspecialchars($error)?></div><?php endif; ?>
+  <form method="post">
+    <label>Usuario<br><input name="username" required></label><br>
+    <label>Contraseña<br><input name="password" type="password" required></label><br><br>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
 </body>
 </html>
