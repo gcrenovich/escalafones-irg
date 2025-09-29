@@ -1,4 +1,8 @@
 <?php
+
+session_start();
+
+
 session_start();
 require 'config/db.php';
 
