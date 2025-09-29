@@ -1,5 +1,5 @@
 <?php
-include '../includes/db.php';
+include '../config/db.php';
 
 if ($_POST) {
     $legajo = $_POST['legajo'];

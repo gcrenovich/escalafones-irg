@@ -1,5 +1,5 @@
 <?php
-include '../includes/db.php';
+include '../config/db.php';
 
 $legajo = $_GET['legajo'];
 $result = $conn->query("SELECT * FROM empleados WHERE legajo='$legajo'");

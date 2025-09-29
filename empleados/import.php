@@ -1,5 +1,5 @@
 <?php
-include '../includes/db.php';
+include '../config/db.php';
 
 if ($_POST && isset($_FILES['file'])) {
     $file = $_FILES['file']['tmp_name'];
