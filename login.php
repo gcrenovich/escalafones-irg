@@ -1,12 +1,9 @@
 <?php
-
-session_start();
-
-
 session_start();
 require 'config/db.php';
 
 $error = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
@@ -39,20 +36,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Login - Escalafones IRG</title>
-    <link rel="stylesheet" href="public/css/styles.css">
+    <link rel="stylesheet" href="public/css/style.css">
 </head>
 <body>
-    <h2>Acceso al Sistema Escalafones IRG</h2>
-    <?php if ($error): ?>
-        <p style="color:red;"><?= $error ?></p>
-    <?php endif; ?>
-    <form method="POST">
-        <label>Usuario:</label>
-        <input type="text" name="username" required><br>
-        <label>Contraseña:</label>
-        <input type="password" name="password" required><br>
-        <button type="submit">Ingresar</button>
-    </form>
+    <div class="login-container">
+        <h2>Acceso al Sistema</h2>
+
+        <?php if ($error): ?>
+            <p class="error"><?= $error ?></p>
+        <?php endif; ?>
+
+        <form method="POST">
+            <label for="username">Usuario:</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Ingresar</button>
+        </form>
+    </div>
 </body>
 </html>
-
