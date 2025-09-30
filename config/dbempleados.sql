@@ -1,11 +1,11 @@
-INSERT INTO empleados (legajo, nombre, categoria, fecha_ingreso, dias_actuales, dias_totales, escalafon)
+INSERT INTO empleados (legajo, nombre, categoria, fecha_ingreso, dias_actuales, dias_totales, escalafon, creado_en)
 VALUES
-(5395, 'VELAZQUEZ, TOMAS REYNALDO', 'Eventual', '1975-01-07', 0, 0, 8),
-(5429, 'LEDESMA, ANGEL ALBERTO', 'Eventual', '1975-03-11', 0, 0, 7),
-(5477, 'BALANZA, CESAR DONATO', 'Transitorio', '1975-08-12', 0, 0, 1),
-(5490, 'TEJERINA, RAMON EDUARDO', 'Eventual', '1975-09-23', 0, 0, 7),
-(5553, 'BARGAS, HECTOR DOMINGO', 'Transitorio', '1976-06-28', 0, 0, 3),
-(5604, 'YACANTE, WALTER HUGO', 'Transitorio', '16/08/1976', 0, 0, 4, 0),
+(5395, 'VELAZQUEZ, TOMAS REYNALDO', 'Eventual', '1975-01-07', 0, 0, 8,0),
+(5429, 'LEDESMA, ANGEL ALBERTO', 'Eventual', '1975-03-11', 0, 0, 7,0),
+(5477, 'BALANZA, CESAR DONATO', 'Transitorio', '1975-08-12', 0, 0, 1,0),
+(5490, 'TEJERINA, RAMON EDUARDO', 'Eventual', '1975-09-23', 0, 0, 7,0),
+(5553, 'BARGAS, HECTOR DOMINGO', 'Transitorio', '1976-06-28', 0, 0, 3,0),
+(5604, 'YACANTE, WALTER HUGO', 'Transitorio', '16/08/1976', 0, 0, 4,0),
 (5627, 'CANO, VICENTE', 'Transitorio', '23/09/1976', 0, 0, 1, 0),
 (5639, 'ALARCON, LUIS ALBERTO', 'Eventual', '18/11/1976', 0, 0, 4, 0),
 (5695, 'BARRIOS, EDUARDO', 'Transitorio', '23/06/1978', 0, 0, 4, 0),
@@ -1058,5 +1058,5 @@ VALUES
 (9843, 'CRUZ, SERGIO ISMAEL', 'Eventual', '27/07/2022', 0, 0, 1, 0),
 (9845, 'PELLISCO, NOEL ELBER ISMAEL', 'Eventual', '14/09/2022', 0, 0, 1, 0),
 (9847, 'ROJAS, GABRIELA', 'Eventual', '10/09/2024', 0, 0, 1, 0),
-(9848, 'ALARCON, MARIANA BEATRIZ', 'Eventual', '10/09/2024', 0, 0, 1, 0),
+(9848, 'ALARCON, MARIANA BEATRIZ', 'Eventual', '10/09/2024', 0, 0, 1, 0);
 
