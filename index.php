@@ -7,6 +7,19 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
+/**
+ * Actualiza escalafón y días actuales en base a los días totales.
+ * Fórmula: 
+ *   escalafon = FLOOR(dias_totales / 270)
+ *   dias_actuales = dias_totales % 270
+ */
+$conn->query("
+    UPDATE empleados
+    SET 
+        escalafon = FLOOR(dias_totales / 270),
+        dias_actuales = dias_totales % 270
+");
+
 // Empleados ordenados por proximidad a 270
 $q = "SELECT legajo, nombre, categoria, fecha_ingreso, dias_actuales, dias_totales, escalafon
       FROM empleados
@@ -38,22 +51,26 @@ $res2 = $conn->query($q2);
 <h3>Próximos a 270 días</h3>
 <table class="table">
 <tr>
-  <th>Legajo</th><th>Nombre</th><th>Categoría</th>
-  <th>Días Actuales</th><th>Días Restantes</th>
-  <th>Escalafón</th><th>Alerta</th>
+  <th>Legajo</th>
+  <th>Nombre</th>
+  <th>Categoría</th>
+  <th>Días Actuales</th>
+  <th>Días Restantes</th>
+  <th>Escalafón</th>
+  <th>Alerta</th>
 </tr>
 <?php while($row = $res->fetch_assoc()): 
-    $rest = 270 - (float)$row['dias_actuales'];
+    $rest = 270 - (int)$row['dias_actuales'];
     $alert = '';
-    if ($rest <= 15 && $rest > 0) $alert = 'Próximo (<=15d)';
-    if ($row['dias_actuales'] >= 270) $alert = 'Sube escalafón';
+    if ($rest <= 15 && $rest > 0) $alert = '⚠️ Próximo (<=15d)';
+    if ((int)$row['dias_actuales'] === 0 && (int)$row['escalafon'] > 0) $alert = '✅ Subió escalafón';
 ?>
 <tr>
   <td><?=htmlspecialchars($row['legajo'])?></td>
   <td><?=htmlspecialchars($row['nombre'])?></td>
   <td><?=htmlspecialchars($row['categoria'])?></td>
-  <td><?=round($row['dias_actuales'],2)?></td>
-  <td><?=round($rest,2)?></td>
+  <td><?=intval($row['dias_actuales'])?></td>
+  <td><?=$rest?></td>
   <td><?=intval($row['escalafon'])?></td>
   <td><?=$alert?></td>
 </tr>
