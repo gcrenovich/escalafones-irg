@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
         try {
             // Insertar en la tabla registros
-            $stmt = $conn->prepare("
+            $stmt = $conn->prepare("s
                 INSERT INTO registros (legajo, fecha, horas, dias_calculados) 
                 VALUES (?, ?, ?, ?)
             ");

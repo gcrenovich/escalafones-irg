@@ -7,11 +7,36 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
+// ---- FILTRO POR FECHAS ----
+$desde = isset($_GET['desde']) ? $_GET['desde'] : '';
+$hasta = isset($_GET['hasta']) ? $_GET['hasta'] : '';
+$rango = isset($_GET['rango']) ? (int)$_GET['rango'] : 0; // 30, 60, 90 días
+
+if ($rango > 0) {
+    $desde = date('Y-m-d', strtotime("-$rango days"));
+    $hasta = date('Y-m-d');
+}
+
+$condicionFechas = "";
+if ($desde && $hasta) {
+    $condicionFechas = "AND e.legajo IN (
+        SELECT DISTINCT legajo FROM registros
+        WHERE fecha BETWEEN '$desde' AND '$hasta'
+    )";
+} elseif ($desde) {
+    $condicionFechas = "AND e.legajo IN (
+        SELECT DISTINCT legajo FROM registros
+        WHERE fecha >= '$desde'
+    )";
+} elseif ($hasta) {
+    $condicionFechas = "AND e.legajo IN (
+        SELECT DISTINCT legajo FROM registros
+        WHERE fecha <= '$hasta'
+    )";
+}
+
 /**
  * Actualiza escalafón y días actuales en base a los días totales.
- * Fórmula: 
- *   escalafon = FLOOR(dias_totales / 270)
- *   dias_actuales = dias_totales % 270
  */
 $conn->query("
     UPDATE empleados
@@ -20,14 +45,16 @@ $conn->query("
         dias_actuales = dias_totales % 270
 ");
 
-// Empleados ordenados por proximidad a 270
-$q = "SELECT legajo, nombre, categoria, fecha_ingreso, dias_actuales, dias_totales, escalafon
-      FROM empleados
+// ---- EMPLEADOS ORDENADOS ----
+$q = "SELECT e.legajo, e.nombre, e.categoria, e.fecha_ingreso, 
+             e.dias_actuales, e.dias_totales, e.escalafon
+      FROM empleados e
+      WHERE 1=1 $condicionFechas
       ORDER BY (270 - dias_actuales) ASC, dias_actuales DESC
       LIMIT 200";
 $res = $conn->query($q);
 
-// Eventuales: ventana 3 años
+// ---- EVENTUALES (últimos 3 años) ----
 $q2 = "SELECT e.legajo, e.nombre, IFNULL(SUM(r.dias_calculados),0) AS dias_3años,
        CASE 
             WHEN IFNULL(SUM(r.dias_calculados),0) >= 300 THEN 'RIESGO'
@@ -47,6 +74,24 @@ $res2 = $conn->query($q2);
 ?>
 
 <h2>Dashboard</h2>
+
+<!-- FILTRO POR RANGO DE FECHAS -->
+<form method="GET" style="margin-bottom:20px;">
+    <label>Desde:</label>
+    <input type="date" name="desde" value="<?=htmlspecialchars($desde)?>">
+    <label>Hasta:</label>
+    <input type="date" name="hasta" value="<?=htmlspecialchars($hasta)?>">
+    <button type="submit">Filtrar</button>
+    <a href="index.php" class="btn btn-secondary">Limpiar</a>
+</form>
+
+<!-- FILTRO RÁPIDO -->
+<div style="margin-bottom:20px;">
+    <b>Rangos rápidos:</b>
+    <a href="index.php?rango=30" class="btn btn-sm btn-info">Últimos 30 días</a>
+    <a href="index.php?rango=60" class="btn btn-sm btn-info">Últimos 60 días</a>
+    <a href="index.php?rango=90" class="btn btn-sm btn-info">Últimos 90 días</a>
+</div>
 
 <h3>Próximos a 270 días</h3>
 <table class="table">
