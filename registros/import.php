@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file = fopen($_FILES['file']['tmp_name'], "r");
@@ -83,5 +84,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 1003;2023-01-03;0;1
 </pre>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
 
