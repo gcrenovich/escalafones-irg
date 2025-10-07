@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
         try {
             // Insertar en la tabla registros
-            $stmt = $conn->prepare("s
+            $stmt = $conn->prepare("
                 INSERT INTO registros (legajo, fecha, horas, dias_calculados) 
                 VALUES (?, ?, ?, ?)
             ");
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
         } catch (mysqli_sql_exception $e) {
             if ($e->getCode() == 1452) { // código error FK
-                $errores[] = "⚠️ El legajo <b>$legajo</b> no existe en la tabla empleados. Empleado no Registrado. Registro omitido.";
+                $errores[] = "⚠️ El legajo <b>$legajo</b> no existe en la tabla empleados. Registro omitido.";
             } else {
                 $errores[] = "⚠️ Error en legajo <b>$legajo</b>: " . $e->getMessage();
             }
