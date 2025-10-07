@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $file = fopen($_FILES['file']['tmp_name'], "r");
     $row = 0;
     $errores = [];
+    $importados = 0;
 
     while (($data = fgetcsv($file, 1000, ";")) !== FALSE) {
         if ($row == 0) { 
@@ -16,17 +17,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
         // CSV esperado: legajo;fecha;horas;dias
         $legajo = (int)$data[0];
-        $fecha  = $data[1];
+        $fecha  = trim($data[1]);
         $horas  = isset($data[2]) ? (float)$data[2] : 0;
         $dias   = isset($data[3]) ? (float)$data[3] : 0;
 
-        // Si hay horas, convertirlas a días (8 horas = 1 día)
+        // 🔹 Si la fecha viene con "/", la convertimos a formato MySQL
+        if (strpos($fecha, '/') !== false) {
+            $partes = explode('/', $fecha);
+            if (count($partes) === 3) {
+                $fecha = $partes[2] . '-' . $partes[1] . '-' . $partes[0];
+            }
+        }
+
+        // 🔹 Si hay horas, convertirlas a días (8 horas = 1 día)
         if ($horas > 0) {
             $dias += $horas / 8;
         }
 
+        // 🔹 Obtener el año y mes (para validación mensual)
+        $mes = date('Y-m', strtotime($fecha));
+
+        // 🔹 Consultar acumulado actual del mes
+        $check = $conn->prepare("
+            SELECT 
+                IFNULL(SUM(dias_calculados),0) AS dias_mes,
+                IFNULL(SUM(horas),0) AS horas_mes
+            FROM registros 
+            WHERE legajo = ? AND DATE_FORMAT(fecha, '%Y-%m') = ?
+        ");
+        $check->bind_param("is", $legajo, $mes);
+        $check->execute();
+        $check->bind_result($dias_mes, $horas_mes);
+        $check->fetch();
+        $check->close();
+
+        // 🔹 Verificar límites
+        $nuevo_dias = $dias_mes + $dias;
+        $nuevo_horas = $horas_mes + $horas;
+
+        if ($nuevo_dias > 31 || $nuevo_horas > 248) {
+            $errores[] = "⚠️ El legajo <b>$legajo</b> supera el límite mensual (31 días o 248 horas) en <b>$mes</b>. Registro omitido.";
+            continue;
+        }
+
         try {
-            // Insertar en la tabla registros
+            // ---- INSERTAR REGISTRO ----
             $stmt = $conn->prepare("
                 INSERT INTO registros (legajo, fecha, horas, dias_calculados) 
                 VALUES (?, ?, ?, ?)
@@ -44,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
             $upd->bind_param("ddi", $dias, $dias, $legajo);
             $upd->execute();
 
-            // Verificar si corresponde ajustar escalafón
+            // ---- AJUSTAR ESCALAFÓN ----
             $q = $conn->prepare("SELECT dias_actuales, escalafon FROM empleados WHERE legajo = ?");
             $q->bind_param("i", $legajo);
             $q->execute();
@@ -65,6 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
                 $upd2->execute();
             }
 
+            $importados++;
+
         } catch (mysqli_sql_exception $e) {
             if ($e->getCode() == 1452) { // código error FK
                 $errores[] = "⚠️ El legajo <b>$legajo</b> no existe en la tabla empleados. Registro omitido.";
@@ -76,9 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
     fclose($file);
 
-    echo "<p style='color:green'>✅ Registros importados y empleados actualizados correctamente.</p>";
+    echo "<p style='color:green'>✅ $importados registros importados y empleados actualizados correctamente.</p>";
     if (!empty($errores)) {
-        echo "<div style='color:red'><h3>Errores encontrados:</h3><ul>";
+        echo "<div style='color:red'><h3>Advertencias:</h3><ul>";
         foreach ($errores as $err) {
             echo "<li>$err</li>";
         }
