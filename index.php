@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/header.php';
@@ -75,8 +76,19 @@ $res = $conn->query($q);
     <a href="index.php?rango=90" class="btn btn-sm btn-info">Últimos 90 días</a>
 </div>
 
+<!-- ENLACE AL DASHBOARD ESPECÍFICO DE EVENTUALES -->
+<div style="margin-top:24px;">
+    <h3>Eventuales — informe específico (últimos 3 años)</h3>
+    <p>
+        Para ver el detalle por año y las alertas (NORMAL / ALERTA / RIESGO), accede al dashboard específico:
+    </p>
+    <p>
+        <a href="dashboard_eventuales.php" class="btn btn-primary">📊 Ver Dashboard de Eventuales (últimos 3 años)</a>
+    </p>
+</div>
+
 <h3>Próximos a 270 días</h3>
-<table class="table">
+<table class="table" id="tablaEmpleados">
 <tr>
   <th>Legajo</th>
   <th>Nombre</th>
@@ -104,15 +116,32 @@ $res = $conn->query($q);
 <?php endwhile; ?>
 </table>
 
-<!-- ENLACE AL DASHBOARD ESPECÍFICO DE EVENTUALES -->
-<div style="margin-top:24px;">
-    <h3>Eventuales — informe específico (últimos 3 años)</h3>
-    <p>
-        Para ver el detalle por año y las alertas (NORMAL / ALERTA / RIESGO), accede al dashboard específico:
-    </p>
-    <p>
-        <a href="dashboard_eventuales.php" class="btn btn-primary">📊 Ver Dashboard de Eventuales (últimos 3 años)</a>
-    </p>
-</div>
+<script>
+// === ORDENAMIENTO DE TABLAS POR COLUMNA ===
+document.addEventListener("DOMContentLoaded", function() {
+    const table = document.getElementById("tablaEmpleados");
+    const headers = table.querySelectorAll("th");
+    let sortDirection = 1;
+
+    headers.forEach((header, index) => {
+        header.style.cursor = "pointer";
+        header.addEventListener("click", () => {
+            const rows = Array.from(table.querySelectorAll("tr:nth-child(n+2)"));
+            const isNumeric = !isNaN(rows[0].children[index].innerText.trim());
+            rows.sort((a, b) => {
+                let A = a.children[index].innerText.trim();
+                let B = b.children[index].innerText.trim();
+                if (isNumeric) {
+                    A = parseFloat(A) || 0;
+                    B = parseFloat(B) || 0;
+                }
+                return (A > B ? 1 : A < B ? -1 : 0) * sortDirection;
+            });
+            sortDirection *= -1;
+            rows.forEach(r => table.appendChild(r));
+        });
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
