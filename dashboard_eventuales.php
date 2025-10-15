@@ -9,12 +9,12 @@ if (!isset($_SESSION['username'])) {
 
 echo "<h2>Dashboard - Eventuales (últimos 3 años)</h2>";
 
-// Años a mostrar dinámicamente
+// Años dinámicos
 $year_actual = date('Y');
 $year2 = $year_actual - 1;
 $year3 = $year_actual - 2;
 
-// Consulta que calcula días por año y total
+// Consulta de días por año y total
 $q = "
     SELECT 
         e.legajo, 
@@ -39,8 +39,14 @@ $q = "
 $res = $conn->query($q);
 ?>
 
-<table class="table" border="1" cellspacing="0" cellpadding="5">
-    <tr style="background:#ddd">
+<!-- BOTONES SUPERIORES -->
+<div style="margin-bottom: 20px;">
+    <a href="index.php" class="btn">⬅️ Volver al Dashboard Principal</a>
+    <button id="btnExportar" class="btn btn-secondary">📤 Exportar CSV</button>
+</div>
+
+<table class="table" border="1" cellspacing="0" cellpadding="5" id="tablaEventuales">
+    <tr style="background:#ddd; cursor:pointer;">
         <th>Legajo</th>
         <th>Nombre</th>
         <th><?=$year3?></th>
@@ -67,8 +73,50 @@ $res = $conn->query($q);
     <?php endwhile; ?>
 </table>
 
-<a href="index.php" class="btn">⬅️ Volver al Dashboard Principal</a>
+<!-- JS: ORDENAR Y EXPORTAR -->
+<script>
+// === ORDENAR TABLA ===
+document.addEventListener("DOMContentLoaded", function() {
+    const table = document.getElementById("tablaEventuales");
+    const headers = table.querySelectorAll("th");
+    let sortDirection = 1;
 
-<?php
-require_once __DIR__ . '/includes/footer.php';
-?>
+    headers.forEach((header, index) => {
+        header.addEventListener("click", () => {
+            const rows = Array.from(table.querySelectorAll("tr:nth-child(n+2)"));
+            const isNumeric = !isNaN(rows[0].children[index].innerText.trim());
+            rows.sort((a, b) => {
+                let A = a.children[index].innerText.trim();
+                let B = b.children[index].innerText.trim();
+                if (isNumeric) {
+                    A = parseFloat(A) || 0;
+                    B = parseFloat(B) || 0;
+                }
+                return (A > B ? 1 : A < B ? -1 : 0) * sortDirection;
+            });
+            sortDirection *= -1;
+            rows.forEach(r => table.appendChild(r));
+        });
+    });
+
+    // === EXPORTAR A CSV ===
+    document.getElementById("btnExportar").addEventListener("click", () => {
+        let csv = [];
+        const rows = table.querySelectorAll("tr");
+        rows.forEach(row => {
+            const cols = row.querySelectorAll("th, td");
+            const values = Array.from(cols).map(col => `"${col.innerText.replace(/"/g, '""')}"`);
+            csv.push(values.join(";"));
+        });
+
+        const blob = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "eventuales_3anios.csv";
+        a.click();
+    });
+});
+</script>
+
+<?php require_once __DIR__ . '/includes/footer.php'; ?>
