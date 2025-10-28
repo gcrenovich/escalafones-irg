@@ -1,7 +1,7 @@
 <?php
 require 'config/db.php';
 
-$username = "liquidacion"; // el nombre de usuario que quieras
+$username = "admin"; // el nombre de usuario que quieras
 $password = "123456"; // la contraseña que quieras
 $rol = "admin";
 
