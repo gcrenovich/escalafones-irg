@@ -8,7 +8,7 @@ USE escalafones_irg;
 CREATE TABLE empleados (
     legajo INT PRIMARY KEY,                  -- Identificador único (ej: 5395)
     nombre VARCHAR(100) NOT NULL,
-    categoria ENUM('planta','eventual') NOT NULL,
+    categoria ENUM('Transitorio','Eventual') NOT NULL,
     fecha_ingreso DATE NOT NULL,
     dias_actuales INT DEFAULT 0,             -- días acumulados en el escalafón actual
     dias_totales INT DEFAULT 0,              -- suma histórica de todos los días
