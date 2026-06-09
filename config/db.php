@@ -1,10 +1,10 @@
 <?php
 
 
-$host = "localhost";
-$user = "root";
-$pass = "";
-$dbname = "escalafones_irg";
+$host = "sql307.infinityfree.com";
+$user = "if0_41248892";
+$pass = "j1KvhEdorT17";
+$dbname = "if0_41248892_escalafones_irg";
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 
